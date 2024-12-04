@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Título do aplicativo
-st.title("Painel de Performance: Produtos, Canais e Faturamento")
+st.title("Painel de Performance: Canais e Faturamento")
 st.sidebar.header("Configurações")
 
 # Upload de arquivo CSV
