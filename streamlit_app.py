@@ -136,5 +136,44 @@ if uploaded_file is not None:
     ax3.grid(axis='y', linestyle='--', alpha=0.7)
     st.pyplot(fig3)
 
+    # Gráfico 4: Porcentagem de Vendas por Canal e Ano
+    st.write("### Porcentagem de Vendas por Canal e Ano")
+    receita_por_ano_canal = data.groupby(['ano', 'cod_canal'])['vlr_receita_real'].sum().reset_index()
+    total_por_ano = receita_por_ano_canal.groupby('ano')['vlr_receita_real'].sum().reset_index()
+    total_por_ano.rename(columns={'vlr_receita_real': 'total'}, inplace=True)
+    receita_por_ano_canal = receita_por_ano_canal.merge(total_por_ano, on='ano')
+    receita_por_ano_canal['percentual'] = (receita_por_ano_canal['vlr_receita_real'] / receita_por_ano_canal['total']) * 100
+
+    fig4, ax4 = plt.subplots(figsize=(10, 6))
+    canais = receita_por_ano_canal['cod_canal'].unique()
+    anos = receita_por_ano_canal['ano'].unique()
+    bar_width = 0.35
+    x = range(len(anos))
+
+    for i, canal in enumerate(canais):
+        canal_data = receita_por_ano_canal[receita_por_ano_canal['cod_canal'] == canal]
+        ax4.bar(
+            [pos + i * bar_width for pos in x],
+            canal_data['percentual'],
+            bar_width,
+            label=f"Canal {canal}"
+        )
+        for pos, perc in zip(x, canal_data['percentual']):
+            ax4.text(
+                pos + i * bar_width,
+                perc + 1,
+                f"{perc:.1f}%",
+                ha='center',
+                fontsize=10
+            )
+
+    ax4.set_xticks([pos + bar_width / 2 for pos in x])
+    ax4.set_xticklabels(anos)
+    ax4.set_title("Porcentagem de Vendas por Canal e Ano", fontsize=14)
+    ax4.set_ylabel("Porcentagem (%)", fontsize=12)
+    ax4.legend(title="Canais")
+    ax4.grid(axis='y', linestyle='--', alpha=0.7)
+    st.pyplot(fig4)
+
 else:
     st.info("Por favor, faça o upload de um arquivo CSV para começar a análise.")
