@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -16,6 +15,9 @@ if uploaded_file is not None:
 
     # Limpeza e Tratamento Inicial
     data.columns = data.columns.str.lower().str.strip()  # Padronizando os nomes das colunas
+
+    # Tratando a coluna 'cod_ciclo' para string sem vírgula
+    data['cod_ciclo'] = data['cod_ciclo'].astype(str).str.replace(',', '')
 
     # Substituindo valores nulos em colunas financeiras com 0
     financial_cols = [
@@ -50,32 +52,88 @@ if uploaded_file is not None:
     # Gráficos
     st.subheader("Gráficos")
 
-    # Receita Total por Canal
+    # Gráfico 1: Receita Total por Canal
     st.write("### Receita Total por Canal")
+    receita_por_canal = summary.groupby('cod_canal')['total_receita'].sum()
     fig1, ax1 = plt.subplots(figsize=(10, 6))
-    summary.groupby('cod_canal')['total_receita'].sum().plot(kind='bar', ax=ax1)
-    ax1.set_title("Receita Total por Canal")
-    ax1.set_ylabel("Receita Total")
-    ax1.set_xlabel("Canal")
+    bars = ax1.bar(
+        receita_por_canal.index,
+        receita_por_canal.values,
+        color='green',
+        width=0.5  # Reduzindo a largura das barras
+    )
+    
+    # Adicionando os valores ao final de cada barra
+    for bar in bars:
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + (0.01 * bar.get_height()),
+            f"R${bar.get_height():,.2f}",  # Formatação como moeda
+            ha='center',
+            va='bottom',
+            fontsize=10,
+            color='black'
+        )
+
+    # Ajustando o eixo Y para incrementos regulares de 50 milhões
+    max_value = receita_por_canal.max()
+    step_size = 50_000_000  # Escala do eixo Y: 50 milhões
+    ax1.set_yticks(range(0, int(max_value) + step_size, step_size))
+    ax1.set_yticklabels([f"{int(tick / 1_000_000)}M" for tick in ax1.get_yticks()])
+
+    # Títulos e rótulos
+    ax1.set_title("Receita Total por Canal", fontsize=14)
+    ax1.set_ylabel("Receita (em milhões)", fontsize=12)
+    ax1.set_xlabel("Canal", fontsize=12)
+    ax1.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Renderizando o gráfico no Streamlit
     st.pyplot(fig1)
 
-    # Percentual Médio de Desconto por Categoria
+    # Gráfico 2: Percentual Médio de Desconto por Categoria (Rosca)
     st.write("### Percentual Médio de Desconto por Categoria")
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    summary.groupby('des_categoria_material')['desconto_medio'].mean().plot(kind='bar', ax=ax2)
+    desconto_por_categoria = summary.groupby('des_categoria_material')['desconto_medio'].mean()
+    fig2, ax2 = plt.subplots(figsize=(8, 8))
+    wedges, texts, autotexts = ax2.pie(
+        desconto_por_categoria,
+        labels=desconto_por_categoria.index,
+        autopct='%1.1f%%',
+        startangle=90,
+        pctdistance=0.85,
+        colors=plt.cm.Paired.colors  # Usando uma paleta de cores diferente
+    )
+    circle = plt.Circle((0, 0), 0.70, color='white')
+    fig2.gca().add_artist(circle)
+
     ax2.set_title("Percentual Médio de Desconto por Categoria")
-    ax2.set_ylabel("Percentual Médio de Desconto")
-    ax2.set_xlabel("Categoria")
     st.pyplot(fig2)
 
-    # Receita Líquida por Ciclo
-    st.write("### Receita Líquida por Ciclo")
+    # Gráfico 3: Receita Líquida por Ano
+    st.write("### Receita Líquida por Ano")
+    data['ano'] = data['cod_ciclo'].str[:4]
+    receita_por_ano = data.groupby('ano')['vlr_receita_real'].sum().reset_index()
+    receita_por_ano['vlr_receita_real'] = receita_por_ano['vlr_receita_real'] / 1_000_000
+
     fig3, ax3 = plt.subplots(figsize=(12, 6))
-    summary.groupby('cod_ciclo')['receita_liquida'].sum().plot(kind='line', marker='o', ax=ax3)
-    ax3.set_title("Receita Líquida por Ciclo")
-    ax3.set_ylabel("Receita Líquida")
-    ax3.set_xlabel("Ciclo")
-    ax3.grid(True)
+    bars = ax3.bar(
+        receita_por_ano['ano'],
+        receita_por_ano['vlr_receita_real'],
+        color=plt.cm.tab10.colors
+    )
+
+    for bar in bars:
+        ax3.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height() + 0.5,
+            f"{bar.get_height():.1f}M",
+            ha='center',
+            va='bottom'
+        )
+
+    ax3.set_title("Receita Líquida por Ano")
+    ax3.set_ylabel("Receita Líquida (em milhões)")
+    ax3.set_xlabel("Ano")
+    ax3.grid(axis='y', linestyle='--', alpha=0.7)
     st.pyplot(fig3)
 
 else:
